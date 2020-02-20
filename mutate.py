@@ -40,6 +40,7 @@ def main():
 
     # We want to choose which mutations we apply randomly. There are multiple
     # ways to do this. I like shuffling them and then taking a slice.
+    print(len(collector.binops_to_visit))
     print("nodes to choose from: ", collector.binops_to_visit)
     random.shuffle(collector.binops_to_visit)
 
@@ -70,6 +71,7 @@ class AddCollector(ast.NodeVisitor):
         self.binop_count = 0
         self.function_count = 0
         self.binops_to_visit = []
+        self.bool_count = 0
         self.compare_count = 0
 
     # For demonstration purposes: count how many functions there are,
@@ -79,12 +81,25 @@ class AddCollector(ast.NodeVisitor):
         self.generic_visit(node)
         self.function_count += 1
 
+    def visit_BoolOp(self, node):
+        self.generic_visit(node)
+        self.bool_count += 1
+        # check that we are indeed looking at an Add node since this
+        # is what we care about
+        if isinstance(node, ast.BoolOp):
+            # record which node we're looking at by using the counter we
+            # increment each time we visit a BinOp. This uniquely identifies
+            # Add nodes since the AST is traversed deterministically using the
+            # visitor pattern
+            self.binops_to_visit.append(self.binop_count)
+
     # This function will get called on every BinOp node in the tree.
     def visit_BinOp(self, node):
         self.generic_visit(node)
         self.binop_count += 1
         # check that we are indeed looking at an Add node since this
         # is what we care about
+        # if isinstance(node.op, ast.Add):
         if isinstance(node.op, ast.Add):
             # record which node we're looking at by using the counter we
             # increment each time we visit a BinOp. This uniquely identifies
@@ -103,6 +118,7 @@ class AddMutator(ast.NodeTransformer):
         self.count_of_node_to_mutate = count_of_node_to_mutate
         self.binop_count = 0
         self.compare_count = 0
+        self.bool_count = 0
 
     def opposite(self, node):
         if isinstance(node, ast.BinOp):
@@ -127,6 +143,11 @@ class AddMutator(ast.NodeTransformer):
                 node.ops[0] = ast.LtE()
             elif isinstance(node.ops[0], ast.GtE):
                 node.ops[0] = ast.Lt()
+        elif isinstance(node, ast.BoolOp):
+            if isinstance(node.op, ast.And):
+                node.op = ast.Or()
+            if isinstance(node.op, ast.Or):
+                node.op = ast.And()
         return node
 
     def visit_BinOp(self, node):
@@ -162,6 +183,16 @@ class AddMutator(ast.NodeTransformer):
         self.generic_visit(node)
         self.compare_count += 1
         if (self.compare_count == self.count_of_node_to_mutate):
+           new_node = copy.deepcopy(node)
+           new_node = self.opposite(new_node)
+           return new_node
+        else:
+            return node
+
+    def visit_BoolOp(self, node):
+        self.generic_visit(node)
+        self.bool_count += 1
+        if (self.bool_count == self.count_of_node_to_mutate):
            new_node = copy.deepcopy(node)
            new_node = self.opposite(new_node)
            return new_node
