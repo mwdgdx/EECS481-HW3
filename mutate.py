@@ -70,6 +70,7 @@ class AddCollector(ast.NodeVisitor):
         self.binop_count = 0
         self.function_count = 0
         self.binops_to_visit = []
+        self.compare_count = 0
 
     # For demonstration purposes: count how many functions there are,
     # then make sure to continue visiting the children.
@@ -91,12 +92,18 @@ class AddCollector(ast.NodeVisitor):
             # Add nodes since the AST is traversed deterministically using the
             # visitor pattern
             self.binops_to_visit.append(self.binop_count)
-
+    
+    def visit_Compare(self, node):
+        self.generic_visit(node)
+        self.compare_count += 1
+        if isinstance(node.ops[0], ast.Eq):
+            self.binops_to_visit.append(self.compare_count)
 
 class AddMutator(ast.NodeTransformer):
     def __init__(self, count_of_node_to_mutate):
         self.count_of_node_to_mutate = count_of_node_to_mutate
         self.binop_count = 0
+        self.compare_count = 0
 
     def opposite(self, node):
         if isinstance(node, ast.BinOp):
@@ -142,7 +149,7 @@ class AddMutator(ast.NodeTransformer):
             # There are other ways to do this as well (e.g. creating the
             # node directly from a constructor)
             # hidden.fixme_change_to_multiply_node(new_node)
-            new_node = opposite(new_node)
+            new_node = self.opposite(new_node)
 
 
             # returning our new node will overwrite the node we were given on entry
@@ -151,6 +158,16 @@ class AddMutator(ast.NodeTransformer):
         else:
             # If we're not looking at an add node we want to change, don't modify
             # this node whatsoever
+            return node
+
+    def visit_Compare(self, node):
+        self.generic_visit(node)
+        self.compare_count += 1
+        if (self.compare_count == self.count_of_node_to_mutate):
+           new_node = copy.deepcopy(node)
+           new_node = self.opposite(new_node)
+           return new_node
+        else:
             return node
 
 
