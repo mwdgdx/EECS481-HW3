@@ -83,7 +83,6 @@ class AddCollector(ast.NodeVisitor):
     def visit_BinOp(self, node):
         self.generic_visit(node)
         self.binop_count += 1
-
         # check that we are indeed looking at an Add node since this
         # is what we care about
         if isinstance(node.op, ast.Add):
@@ -150,8 +149,6 @@ class AddMutator(ast.NodeTransformer):
             # node directly from a constructor)
             # hidden.fixme_change_to_multiply_node(new_node)
             new_node = self.opposite(new_node)
-
-
             # returning our new node will overwrite the node we were given on entry
             # to this class method
             return new_node
@@ -159,6 +156,7 @@ class AddMutator(ast.NodeTransformer):
             # If we're not looking at an add node we want to change, don't modify
             # this node whatsoever
             return node
+
 
     def visit_Compare(self, node):
         self.generic_visit(node)
@@ -169,6 +167,7 @@ class AddMutator(ast.NodeTransformer):
            return new_node
         else:
             return node
+
 
 
 if __name__ == '__main__':
