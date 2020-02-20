@@ -3,3 +3,5 @@ env/
 .idea/
 saved.py
 test.output
+*.DS_Store
+__pycache__/

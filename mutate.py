@@ -73,6 +73,7 @@ class AddCollector(ast.NodeVisitor):
         self.binops_to_visit = []
         self.bool_count = 0
         self.compare_count = 0
+        self.assign_count = 0
 
     # For demonstration purposes: count how many functions there are,
     # then make sure to continue visiting the children.
@@ -112,6 +113,14 @@ class AddCollector(ast.NodeVisitor):
         self.compare_count += 1
         if isinstance(node.ops[0], ast.Eq):
             self.binops_to_visit.append(self.compare_count)
+    
+    def visit_Assign(self, node):
+        self.generic_visit(node)
+        self.assign_count += 1
+        # print(node.value)
+        if isinstance(node.value, ast.Call):
+            # print(self.assign_count)
+            self.binops_to_visit.append(self.assign_count)
 
 class AddMutator(ast.NodeTransformer):
     def __init__(self, count_of_node_to_mutate):
@@ -119,17 +128,18 @@ class AddMutator(ast.NodeTransformer):
         self.binop_count = 0
         self.compare_count = 0
         self.bool_count = 0
+        self.assign_count = 0
 
     def opposite(self, node):
         if isinstance(node, ast.BinOp):
             if isinstance(node.op, ast.Add):
-                node.op = ast.Sub()
-            elif isinstance(node.op, ast.Sub):
-                node.op = ast.Add()
-            elif isinstance(node.op, ast.Mult):
-                node.op = ast.Div()
-            elif isinstance(node.op, ast.Div):
                 node.op = ast.Mult()
+            elif isinstance(node.op, ast.Sub):
+                node.op = ast.Div()
+            elif isinstance(node.op, ast.Mult):
+                node.op = ast.Add()
+            elif isinstance(node.op, ast.Div):
+                node.op = ast.Sub()
         elif isinstance(node, ast.Compare):
             if isinstance(node.ops[0], ast.Eq):
                 node.ops[0] = ast.NotEq()
@@ -196,6 +206,16 @@ class AddMutator(ast.NodeTransformer):
            new_node = copy.deepcopy(node)
            new_node = self.opposite(new_node)
            return new_node
+        else:
+            return node
+    
+    def visit_Assign(self, node):
+        self.generic_visit(node)
+        self.assign_count += 1
+        if (self.assign_count == self.count_of_node_to_mutate):
+        #    new_node = copy.deepcopy(node)
+        #    new_node = self.opposite(new_node)
+           return None
         else:
             return node
 
